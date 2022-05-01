@@ -13,26 +13,79 @@
 #include <linux/fs.h>       /* for register_chrdev */
 #include <linux/uaccess.h>  /* for get_user and put_user */
 #include <linux/string.h>   /* for memset. NOTE - not string.h!*/
+#include <linux/errno.h>
+#include <linux/slab.h>
+
 
 MODULE_LICENSE("GPL");
 
 //Our custom definitions of IOCTL operations
 #include "message_slot.h"
 
-struct maessage_slot
+struct message_slots
 {
-  char maessge[BUF_LEN];
+  int minor;
+  struct slot *slot;
+  struct message_slots *next;
 };
 
+struct slot{
+    unsigned int id;
+    char *massage;
+    int length;
+    struct slot *next;
+};
 
-static struct maessage_slot device_info;
+static struct message_slots *root;
 
+/* return the message_slot we the maching minor or crate new one*/
+struct message_slots *search_slot(int minor){
+  if(!root){
+    root = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
+    if(!root){
+      return NULL;
+    }
+    root->minor = minor;
+    root->slot = NULL;
+    root->next = NULL;
+    return root;
+  }
+  while(root->next != NULL){
+    if(root->minor == minor){
+      return root;
+    }
+    root = root->next;
+  }
+  if(root->minor == minor){
+    return root;
+  }
+  root->next = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
+  if(!root->next){
+    return NULL;
+  }
+  root = root->next;
+  root->minor = minor;
+  root->slot = NULL;
+  root->next = NULL;
+  return root;   
+
+}
 
 //================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode,
                         struct file*  file )
 {
+  int minor;
+  struct message_slots *slots;
+
+  
   printk("Invoking device_open(%p)\n", file);
+  
+  minor = iminor(inode);
+  slots = search_slot(minor);
+  if(!slots){
+    return -EIO;
+  }
 
   return SUCCESS;
 }
