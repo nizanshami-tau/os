@@ -50,20 +50,16 @@ struct message_slots *search_slot(int minor){
     root->next = NULL;
     return root;
   }
-  while(root->next != NULL){
+  while(root != NULL){
     if(root->minor == minor){
       return root;
     }
     root = root->next;
   }
-  if(root->minor == minor){
-    return root;
-  }
-  root->next = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
-  if(!root->next){
+  root = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
+  if(!root){
     return NULL;
   }
-  root = root->next;
   root->minor = minor;
   root->slot = NULL;
   root->next = NULL;
