@@ -91,7 +91,11 @@ static int device_open( struct inode* inode,
 }
 
 //---------------------------------------------------------------
-
+static int device_release( struct inode* inode,
+                           struct file*  file)
+{
+  return SUCCESS;
+}
 //---------------------------------------------------------------
 // a process which has already opened
 // the device file attempts to read from it
@@ -129,7 +133,11 @@ static long device_ioctl( struct   file* file,
                           unsigned int   ioctl_command_id,
                           unsigned long  ioctl_param )
 {
-  return SUCCESS;
+  if(ioctl_command_id == MSG_SLOT_CHANNEL && ioctl_param > 0 && file){
+    file->private_data = (void *) ioctl_param;
+    return SUCCESS;
+  }
+  return -EINVAL;
 }
 
 //==================== DEVICE SETUP =============================
@@ -143,6 +151,7 @@ struct file_operations Fops =
   .write          = device_write,
   .open           = device_open,
   .unlocked_ioctl = device_ioctl,
+  .release        = device_release,
 };
 
 //---------------------------------------------------------------
