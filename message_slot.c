@@ -25,17 +25,11 @@ MODULE_LICENSE("GPL");
 struct message_slots
 {
   int minor;
-  struct slot *slot;
+  struct channel *channels;
   struct message_slots *next;
 };
 
-struct slot{
-    unsigned int id;
-    char *massage;
-    int length;
-    struct slot *next;
-};
-
+//-----------------------message_slots function-----------------------
 static struct message_slots *root;
 
 /* return the message_slot we the maching minor or crate new one*/
@@ -46,7 +40,7 @@ struct message_slots *search_slot(int minor){
       return NULL;
     }
     root->minor = minor;
-    root->slot = NULL;
+    root->channels = NULL;
     root->next = NULL;
     return root;
   }
@@ -61,12 +55,41 @@ struct message_slots *search_slot(int minor){
     return NULL;
   }
   root->minor = minor;
-  root->slot = NULL;
+  root->channels = NULL;
   root->next = NULL;
   return root;   
 
 }
+//---------------------------------------------------------------
+struct channel{
+    unsigned int id;
+    char *message;
+    int length;
+    struct channel *next;
+};
+//------------------channel functions----------------------------
+struct channel *search_channel(struct channel *channels, int channel_id){
+  if(!channels){
+    channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
+    channels->id = channel_id;
+  }
+  while(channels != NULL){
+    if(channels->id == channel_id){
+      return channels;
+    }
+    channels = channels->next;
+  }
+  channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
+  if(!channels){
+    return NULL;
+  }
+  channels->id = channel_id;
+  channels->message = NULL;
+  channels->length = 0;
+  channels->next = NULL;
+  return channels;   
 
+}
 //================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode,
                         struct file*  file )
@@ -115,11 +138,39 @@ static ssize_t device_write( struct file*       file,
                              size_t             length,
                              loff_t*            offset)
 {
-  int i;
-  printk("Invoking device_write(%p,%ld)\n", file, length);
-  i = 0;
+  int i, minor, channel_id;
+  struct message_slots *ms;
+  struct channel *channel;
+  
+  if(!file || !buffer || !file->private_data){
+    return -ENAVAIL;
+  }
+  channel_id = (int) (uintptr_t) file->private_data;
+  if(channel_id <= 0){
+    return -ENAVAIL;
+  }
+  if(length > BUF_LEN || length == 0){
+    return -EMSGSIZE;
+  }
 
-
+  minor = iminor(file_inode(file));
+  if(minor < 0){
+    return -EIO;
+  }
+  ms = search_slot(minor);
+  if(!ms){
+    return -EIO;
+  }
+  channel = search_channel(ms->channels, channel_id);
+  if(!channel){
+    return -EIO;
+  }
+  channel->message = kmalloc(sizeof(char)*BUF_LEN, GFP_KERNEL);
+  for(i = 0;i < length && i < BUF_LEN;i++){
+    get_user(channel->message[i], &buffer[i]);
+  }
+  channel->length = i;
+  
   // return the number of input characters used
   return i;
 }
