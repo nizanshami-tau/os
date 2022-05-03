@@ -29,8 +29,8 @@ struct message_slots
   struct message_slots *next;
 };
 
-//-----------------------message_slots function-----------------------
 static struct message_slots *root;
+//-----------------------message_slots function-----------------------
 
 /* return the message_slot we the maching minor or crate new one*/
 struct message_slots *search_slot(int minor){
@@ -58,7 +58,6 @@ struct message_slots *search_slot(int minor){
   root->channels = NULL;
   root->next = NULL;
   return root;   
-
 }
 //---------------------------------------------------------------
 struct channel{
@@ -72,6 +71,11 @@ struct channel *search_channel(struct channel *channels, int channel_id){
   if(!channels){
     channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
     channels->id = channel_id;
+    channels->message = NULL;
+    channels->length = 0;
+    channels->next = NULL;
+    return channels;   
+
   }
   while(channels != NULL){
     if(channels->id == channel_id){
@@ -123,11 +127,43 @@ static ssize_t device_read( struct file* file,
                             size_t       length,
                             loff_t*      offset )
 {
-  // read doesnt really do anything (for now)
-  printk( "Invocing device_read(%p,%ld)"
-          ,file, length);
-  //invalid argument error
-  return SUCCESS;
+  int minor, i, channel_id;
+  struct message_slots *ms;
+  struct channel *channel;
+
+  if(!buffer || !file || !file->private_data){
+    return -EINVAL;
+  }
+  channel_id = (int) (uintptr_t) file->private_data;
+  if(channel_id <= 0){
+    return -EINVAL;
+  }
+
+  minor = iminor(file_inode(file));
+  if(minor < 0){
+    return -EIO;
+  }
+  ms = search_slot(minor);
+  if(!ms){
+    return -EIO;
+  }
+  channel = search_channel(ms->channels, channel_id);
+  if(!channel){
+    return -EIO;
+  }
+  if(channel->length == 0 || channel->message == NULL){
+    return -EWOULDBLOCK;
+  }
+  if (channel->length > length)
+  {
+    return -ENOSPC;
+  }
+  for (i = 0; i < channel->length; i++)
+  {
+    put_user(channel->message[i], &buffer[i]);
+  }
+  
+  return i;
 }
 
 //---------------------------------------------------------------
