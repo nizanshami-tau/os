@@ -59,6 +59,7 @@ struct message_slots *search_slot(int minor){
   root->next = NULL;
   return root;   
 }
+
 //---------------------------------------------------------------
 struct channel{
     unsigned int id;
@@ -94,6 +95,31 @@ struct channel *search_channel(struct channel *channels, int channel_id){
   return channels;   
 
 }
+
+//-----------------------cleanup---------------------------------
+void free_channels(struct channel *channels){
+  struct channel *tmp;
+  while(channels != NULL){
+    tmp = channels;
+    channels = channels->next;
+    if(tmp->message){
+      kfree(tmp->message);
+    }
+    kfree(tmp);
+  }
+}
+
+void delete_data(struct message_slots *ms){
+  struct message_slots *tmp;
+  while(ms != NULL){
+    tmp = ms;
+    ms = ms->next;
+    free_channels(tmp->channels);
+    kfree(tmp);
+  }
+}
+
+//---------------------------------------------------------------
 //================== DEVICE FUNCTIONS ===========================
 static int device_open( struct inode* inode,
                         struct file*  file )
@@ -270,6 +296,7 @@ static void __exit cleanup(void)
 {
   // Unregister the device
   // Should always succeed
+  delete_data(root);
   unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 
