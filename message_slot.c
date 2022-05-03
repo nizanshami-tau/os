@@ -35,6 +35,7 @@ static struct message_slots *root;
 /* return the message_slot we the maching minor or crate new one*/
 struct message_slots *search_slot(int minor){
   if(!root){
+    printk("creat node");
     root = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
     if(!root){
       return NULL;
@@ -45,7 +46,9 @@ struct message_slots *search_slot(int minor){
     return root;
   }
   while(root != NULL){
+
     if(root->minor == minor){
+      printk("node found");
       return root;
     }
     root = root->next;
@@ -68,8 +71,9 @@ struct channel{
     struct channel *next;
 };
 //------------------channel functions----------------------------
-struct channel *search_channel(struct channel *channels, int channel_id){
+struct channel *search_channel(struct channel *chennels, int channel_id){
   if(!channels){
+    printk("channel created");
     channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
     channels->id = channel_id;
     channels->message = NULL;
@@ -79,12 +83,15 @@ struct channel *search_channel(struct channel *channels, int channel_id){
 
   }
   while(channels != NULL){
+    printk("sreaching channel\n");
     if(channels->id == channel_id){
+      printk("channel found");
       return channels;
     }
     channels = channels->next;
   }
   channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
+  printk("chennal creat at the end\n");
   if(!channels){
     return NULL;
   }
@@ -93,7 +100,6 @@ struct channel *search_channel(struct channel *channels, int channel_id){
   channels->length = 0;
   channels->next = NULL;
   return channels;   
-
 }
 
 //-----------------------cleanup---------------------------------
@@ -167,21 +173,27 @@ static ssize_t device_read( struct file* file,
 
   minor = iminor(file_inode(file));
   if(minor < 0){
+    printk("minor error\n");
     return -EIO;
   }
   ms = search_slot(minor);
   if(!ms){
+    printk("ms error\n");
     return -EIO;
   }
+  printk("minor: %d", ms->minor);
   channel = search_channel(ms->channels, channel_id);
   if(!channel){
+    printk("channel error\n");
     return -EIO;
   }
   if(channel->length == 0 || channel->message == NULL){
+    printk("channel.length =%d" ,channel->length);
     return -EWOULDBLOCK;
   }
   if (channel->length > length)
   {
+    printk("128 error\n");
     return -ENOSPC;
   }
   for (i = 0; i < channel->length; i++)
@@ -223,6 +235,10 @@ static ssize_t device_write( struct file*       file,
   if(!ms){
     return -EIO;
   }
+  printk("minor id: %d", ms->minor);
+  if(!ms->channels){
+    printk("channels is empty\n");
+  }
   channel = search_channel(ms->channels, channel_id);
   if(!channel){
     return -EIO;
@@ -232,7 +248,7 @@ static ssize_t device_write( struct file*       file,
     get_user(channel->message[i], &buffer[i]);
   }
   channel->length = i;
-  
+  printk("channel_id: %d ,channel_length: %d, channel_mes:%s", channel->id, channel->length, channel->message);
   // return the number of input characters used
   return i;
 }
