@@ -33,34 +33,36 @@ static struct message_slots *root;
 //-----------------------message_slots function-----------------------
 
 /* return the message_slot we the maching minor or crate new one*/
-struct message_slots *search_slot(int minor){
-  if(!root){
-    printk("creat node");
-    root = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
-    if(!root){
+struct message_slots *search_slot(struct message_slots **root, int minor){
+  struct message_slots *new_slot;
+
+  if(!(*root)){
+    new_slot = (struct message_slots*) kmalloc(sizeof(struct message_slots), GFP_KERNEL);
+    if(!new_slot){
       return NULL;
     }
-    root->minor = minor;
-    root->channels = NULL;
-    root->next = NULL;
-    return root;
+    new_slot->minor = minor;
+    new_slot->channels = NULL;
+    new_slot->next = NULL;
+    *root = new_slot;
+    return *root;
   }
-  while(root != NULL){
+  while(*root != NULL){
 
-    if(root->minor == minor){
-      printk("node found");
-      return root;
+    if((*root)->minor == minor){
+      return *root;
     }
-    root = root->next;
+    *root = (*root)->next;
   }
-  root = kmalloc(sizeof(struct message_slots), GFP_KERNEL);
-  if(!root){
+  new_slot = (struct message_slots*) kmalloc(sizeof(struct message_slots), GFP_KERNEL);
+  if(!new_slot){
     return NULL;
   }
-  root->minor = minor;
-  root->channels = NULL;
-  root->next = NULL;
-  return root;   
+  new_slot->minor = minor;
+  new_slot->channels = NULL;
+  new_slot->next = NULL;
+  *root = new_slot;
+  return *root;   
 }
 
 //---------------------------------------------------------------
@@ -71,43 +73,46 @@ struct channel{
     struct channel *next;
 };
 //------------------channel functions----------------------------
-struct channel *search_channel(struct channel *chennels, int channel_id){
-  if(!channels){
-    printk("channel created");
-    channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
-    channels->id = channel_id;
-    channels->message = NULL;
-    channels->length = 0;
-    channels->next = NULL;
-    return channels;   
+struct channel *search_channel(struct channel **channels, int channel_id){
+  struct channel *new_channel;
+  if(!(*channels)){
+    new_channel = (struct channel *)kmalloc(sizeof(struct channel), GFP_KERNEL);
+    if(!new_channel){
+      return NULL;
+    }
+    new_channel->id = channel_id;
+    new_channel->message = NULL;
+    new_channel->length = 0;
+    new_channel->next = NULL;
+    *channels = new_channel;
+    return *channels;   
 
   }
-  while(channels != NULL){
-    printk("sreaching channel\n");
-    if(channels->id == channel_id){
-      printk("channel found");
-      return channels;
+  while(*channels != NULL){
+    if((*channels)->id == channel_id){
+      return *channels;
     }
-    channels = channels->next;
+    *channels = (*channels)->next;
   }
-  channels = kmalloc(sizeof(struct channel), GFP_KERNEL);
-  printk("chennal creat at the end\n");
-  if(!channels){
+  new_channel = (struct channel *)kmalloc(sizeof(struct channel), GFP_KERNEL);
+  if(!new_channel){
     return NULL;
   }
-  channels->id = channel_id;
-  channels->message = NULL;
-  channels->length = 0;
-  channels->next = NULL;
-  return channels;   
+  new_channel->id = channel_id;
+  new_channel->message = NULL;
+  new_channel->length = 0;
+  new_channel->next = NULL;
+  *channels = new_channel;
+  return *channels;   
+   
 }
 
 //-----------------------cleanup---------------------------------
-void free_channels(struct channel *channels){
+void free_channels(struct channel **channels){
   struct channel *tmp;
-  while(channels != NULL){
-    tmp = channels;
-    channels = channels->next;
+  while(*channels != NULL){
+    tmp = *channels;
+    *channels = (*channels)->next;
     if(tmp->message){
       kfree(tmp->message);
     }
@@ -115,12 +120,12 @@ void free_channels(struct channel *channels){
   }
 }
 
-void delete_data(struct message_slots *ms){
+void delete_data(struct message_slots **ms){
   struct message_slots *tmp;
-  while(ms != NULL){
-    tmp = ms;
-    ms = ms->next;
-    free_channels(tmp->channels);
+  while(*ms != NULL){
+    tmp = *ms;
+    *ms = (*ms)->next;
+    free_channels(&tmp->channels);
     kfree(tmp);
   }
 }
@@ -131,14 +136,12 @@ static int device_open( struct inode* inode,
                         struct file*  file )
 {
   int minor;
-  struct message_slots *slots;
-
+  struct message_slots *ms;
   
-  printk("Invoking device_open(%p)\n", file);
   
   minor = iminor(inode);
-  slots = search_slot(minor);
-  if(!slots){
+  ms = search_slot(&root, minor);
+  if(!ms){
     return -EIO;
   }
 
@@ -173,27 +176,21 @@ static ssize_t device_read( struct file* file,
 
   minor = iminor(file_inode(file));
   if(minor < 0){
-    printk("minor error\n");
     return -EIO;
   }
-  ms = search_slot(minor);
+  ms = search_slot(&root, minor);
   if(!ms){
-    printk("ms error\n");
     return -EIO;
   }
-  printk("minor: %d", ms->minor);
-  channel = search_channel(ms->channels, channel_id);
+  channel = search_channel(&ms->channels, channel_id);
   if(!channel){
-    printk("channel error\n");
     return -EIO;
   }
   if(channel->length == 0 || channel->message == NULL){
-    printk("channel.length =%d" ,channel->length);
     return -EWOULDBLOCK;
   }
   if (channel->length > length)
   {
-    printk("128 error\n");
     return -ENOSPC;
   }
   for (i = 0; i < channel->length; i++)
@@ -231,15 +228,11 @@ static ssize_t device_write( struct file*       file,
   if(minor < 0){
     return -EIO;
   }
-  ms = search_slot(minor);
+  ms = search_slot(&root, minor);
   if(!ms){
     return -EIO;
   }
-  printk("minor id: %d", ms->minor);
-  if(!ms->channels){
-    printk("channels is empty\n");
-  }
-  channel = search_channel(ms->channels, channel_id);
+  channel = search_channel(&ms->channels, channel_id);
   if(!channel){
     return -EIO;
   }
@@ -248,7 +241,7 @@ static ssize_t device_write( struct file*       file,
     get_user(channel->message[i], &buffer[i]);
   }
   channel->length = i;
-  printk("channel_id: %d ,channel_length: %d, channel_mes:%s", channel->id, channel->length, channel->message);
+  
   // return the number of input characters used
   return i;
 }
@@ -312,7 +305,7 @@ static void __exit cleanup(void)
 {
   // Unregister the device
   // Should always succeed
-  delete_data(root);
+  delete_data(&root);
   unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 

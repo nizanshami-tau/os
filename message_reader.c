@@ -10,20 +10,20 @@
 int main(int argc, char *argv[]){
     int fd, res;
     unsigned long channel_id;
-    char message[BUF_LEN];
-    /*
+    char message[BUF_LEN+1];
+    
     if(argc != 3){
         printf("error should run program: a.out path(message_slot) channel_id message");
         exit(1);
     }
-    */
+    
 
     fd = open("/dev/slot1", O_RDONLY);
     if(fd < 0){
         perror("ERROR: cannt open file");
         exit(1);
     }
-    channel_id = 10;
+    channel_id = 1;
     res = ioctl(fd, MSG_SLOT_CHANNEL, channel_id);
     if(res != 0){
         perror("ERROR: ioctl faild");
@@ -35,8 +35,8 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     close(fd);
-    printf("%d\n",res);
-    printf("succses\n");
+    message[res] = '\0';
+    printf("%s", message);
     return 0;
 
 }
