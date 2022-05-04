@@ -35,7 +35,6 @@ static struct message_slots *root;
 /* return the message_slot we the maching minor or crate new one*/
 struct message_slots *search_slot(struct message_slots **root, int minor){
   struct message_slots *new_slot;
-
   if(!(*root)){
     new_slot = (struct message_slots*) kmalloc(sizeof(struct message_slots), GFP_KERNEL);
     if(!new_slot){
@@ -48,7 +47,7 @@ struct message_slots *search_slot(struct message_slots **root, int minor){
     return *root;
   }
   while(*root != NULL){
-
+     
     if((*root)->minor == minor){
       return *root;
     }

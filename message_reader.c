@@ -17,13 +17,13 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     
-
-    fd = open("/dev/slot1", O_RDONLY);
+    channel_id = 0;
+    fd = open(argv[1], O_RDONLY);
     if(fd < 0){
         perror("ERROR: cannt open file");
         exit(1);
     }
-    channel_id = 1;
+    channel_id = atoi(argv[2]);
     res = ioctl(fd, MSG_SLOT_CHANNEL, channel_id);
     if(res != 0){
         perror("ERROR: ioctl faild");
@@ -36,7 +36,7 @@ int main(int argc, char *argv[]){
     }
     close(fd);
     message[res] = '\0';
-    printf("%s", message);
+    printf("%s\n", message);
     return 0;
 
 }

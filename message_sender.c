@@ -12,7 +12,7 @@ int main(int argc, char *argv[]){
     unsigned long channel_id;
     
     if(argc != 4){
-        printf("error should run program: a.out path(message_slot) channel_id message");
+        printf("error should run program: program_name path(message_slot) channel_id message");
         exit(1);
     }
     
@@ -34,7 +34,5 @@ int main(int argc, char *argv[]){
         exit(1);
     }
     close(fd);
-    printf("succses\n");
     return 0;
-
 }
