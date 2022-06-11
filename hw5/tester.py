@@ -60,12 +60,15 @@ def run_client_on_folder(should_run_async=False):
 
 def parse_server_output(server, printalbe_characters):
     server.send_signal(signal.SIGINT)
+    print("1")
     server_stdout, _ = server.communicate()
     print(server_stdout.decode("ascii"))
 
     for line in server_stdout.decode('ascii').split('\n')[:-1]:
+        print('yoo',line)
         symbol = line[6:7]
         count = int(line[11:].split(' ')[0])
+        # char ' ': 8 times
         assert printalbe_characters[symbol] == count, f"Wrong count for symbol, symbol: '{symbol}' expected count: {printalbe_characters[symbol]}, actual count: {count}, line: {line}"
 
 def test_client_wrong_arguments():
@@ -156,7 +159,7 @@ def happy_flow_tests():
         print("start server")
         server = start_server()
         print("gen file")
-        _generate_folder_with_random_files(2)
+        _generate_folder_with_random_files(30)
         print("run client on folder")
         printalbe_characters = run_client_on_folder()
         print("output")

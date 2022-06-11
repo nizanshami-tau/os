@@ -19,7 +19,7 @@ bool sigint = false;
 void close_connection(){
     int i;
     for(i = 0;i < 95;i++){
-        printf("char '%c': %lu times\n", (i + 32), pcc_total[i]);
+        printf("char '%c' : %lu times\n", (i + 32), pcc_total[i]);
     }
     exit(0);
 
@@ -129,7 +129,7 @@ void handle_connection(){
 
 
 void signal_handler(){
-    if(conn_fd > 0){// there is a connction
+    if(conn_fd < 0){// there is a connction
         close_connection();
     }
     sigint = true;
