@@ -22,4 +22,6 @@ hw3/modules.order
 hw4/test
 hw5/resorces
 hw5/resorces/rec10
-hw5/resorces/yealsul
+hw5/resorces/yealsulhw5/tester.py
+hw5/client
+hw5/server

@@ -29,11 +29,10 @@ int get_data(char *buff, int len){
     int byte_got = 0;
     int bytes = 1;
 
-    printf("reading data of len %d\n", len);
     while(bytes > 0){
         bytes = read(conn_fd, buff + byte_got, len - byte_got);
         byte_got += bytes;
-        printf("byte got %d, read return %d\n", byte_got, bytes);
+        
     }
 
     if(bytes == 0 && byte_got == len){//read done
@@ -59,11 +58,9 @@ int send_data(char *buff, int len){
     while(bytes > 0){
         bytes = write(conn_fd, buff + bytes_send, len - bytes_send);
         bytes_send += bytes;
-        printf("data send %d\n", bytes_send);
+        
     }
-    printf("data send %d, write return %d\n", bytes_send, bytes);
     if(bytes == 0 && bytes_send == len){//write done
-        printf("write done \n");
         return 0;
     }
     if(bytes == 0){//dont write len byte
@@ -85,19 +82,15 @@ void handle_connection(){
     uint64_t N, net_N, net_C = -1, C;
     uint64_t pcc_connection[95] = {0};
 
-    printf("start handling conn \n"); 
     // Read N from the client 
     int_buff = (char *)&net_N;
-    printf("init buff \n");
     if (get_data(int_buff, 8) == -1)
     {
         return;
     }
     N = be64toh(net_N);
-    printf("strat geting %lu bytes from client\n", N); 
     
-
-
+    
     // get data from client
     rcv_buff = malloc(N);
     if (get_data(rcv_buff, N) == -1)
@@ -118,14 +111,12 @@ void handle_connection(){
     free(rcv_buff);
 
     //send C to client.
-    printf("sending C: %lu to client\n", C); 
     int_buff =(char *)&net_C;
     net_C = htobe64(C);
     if (send_data(int_buff, 8) == -1)
     {
         return;
     }
-    printf("update pcc\n");
     // Update pcc_total.
     for (int i = 0; i < 95; i++)
     {
@@ -167,8 +158,7 @@ int main(int argc,  char *argv[]){
     }
 
 
-    //crate socket
-    printf("create socket\n"); 
+    //crate socket 
     listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if(listen_fd == -1){
         printf("\n Error : faild to create socket %s \n", strerror(errno));
@@ -187,7 +177,6 @@ int main(int argc,  char *argv[]){
     serv_addr.sin_port = htons(atoi(argv[1]));
 
     //bind
-    printf("binding\n");   
     if(bind(listen_fd, (struct sockaddr *)&serv_addr, addrsize) == -1){
     printf("\n Error : Bind Failed. %s \n", strerror(errno));
     return 1;
@@ -199,7 +188,6 @@ int main(int argc,  char *argv[]){
   }
 
     while(1){
-        printf("start loop\n"); 
         if(sigint){
             close_connection();
         }
@@ -209,12 +197,9 @@ int main(int argc,  char *argv[]){
             printf("\n Error : accept Failed. %s \n", strerror(errno));
             return 1;
         }
-        printf("accept conn\n"); 
-    
-
+        
         handle_connection();
     }
-    printf("closeing\n");  
     close(conn_fd);
     conn_fd = -1;
 
